@@ -1,5 +1,6 @@
 import Mathlib
 import MatrixAnalysis.Data.Polynomial.Basic
+import MatrixAnalysis.Data.Matrix.Basic
 import MatrixAnalysis.Data.Matrix.Eigenvalues
 
 namespace MatrixAnalysis
@@ -27,22 +28,10 @@ theorem eigenvector_scalar_multiple
 
 /- # Example (p36): Verify the eigenvalues of a given matrix.
 
-In the example below, we wish to start with a specific 2 × 2 matrix A and verify it has certain eigenvalue/eigenvector pairs. In the proofs, we need to show the eigenvalue equation holds, and show that the eigenvectors we choose are non-zero. The latter bit is harder than it should be. The two theorems here can be used as helpers. In particular, the second one says that two matrices are different if they are different at a particular location. -/
-
-theorem matrix_eq_all
-  {n m:ℕ} {A : Matrix (Fin n) (Fin m) ℂ} {B : Matrix (Fin n) (Fin m) ℂ}
-  : A = B ↔ ∀ i j, A i j = B i j := by
-  constructor
-  . intro h i j
-    exact congrFun (congrFun h i) j
-  . exact Matrix.ext
-
-theorem matrix_neq_exists
-  {n m:ℕ} {A : Matrix (Fin n) (Fin m) ℂ} {B : Matrix (Fin n) (Fin m) ℂ}
-  : A ≠ B ↔ ∃ i j, A i j ≠ B i j := by
-  simp[matrix_eq_all]
-
-/- Now we can do the examples for a specific matrix. -/
+In the example below, we wish to start with a specific 2 × 2 matrix A and verify it has certain eigenvalue/eigenvector pairs. In the proofs, we need to show the eigenvalue equation holds, and show that the eigenvectors we choose are non-zero. The latter bit is harder than it should be. Two theorems we put in Data.Matrix.Basic can be used as helpers.
+  - matrix_eq_all
+  - matrix_neq_exists
+These are both about the equality of two matrices. The first one says that two matrices are equal if they are equal at all locations. Now we can do the examples for a specific matrix. -/
 
 namespace Example
 
@@ -282,8 +271,19 @@ theorem eigen_inv
 
 /- # Exercise 2 : If the sum of each row is 1, then 1 is an eigenvalue -/
 
-theorem sum_rows_one {n:ℕ} {A : Matrix (Fin n) (Fin n) ℂ}
-  : ∀ i : Fin n, ∑ j : Fin n, A i j = 1 → is_eigenvalue A 0 := sorry
+theorem sum_rows_one {n:ℕ} {hnp : n>0} {A : Matrix (Fin n) (Fin n) ℂ}
+  : (∀ i : Fin n, ∑ j : Fin n, A i j = 1) → is_eigenvalue A 1 := by
+    intro hi
+    unfold is_eigenvalue
+    use Matrix.of (λ _ _ => 1)
+    constructor
+    . intro h
+      simp[matrix_eq_all] at h
+      exact h (by exact ⟨0, hnp⟩)
+    . simp[matrix_eq_all]
+      intro j k
+      simp[Matrix.mul_apply]
+      exact hi j
 
 /- # Exercise 3 : Todo -/
 
