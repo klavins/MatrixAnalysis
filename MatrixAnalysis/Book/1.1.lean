@@ -237,17 +237,33 @@ theorem eig_zero_to_non_sing
 
 /- # Exercise 1 : Eigenvalues of the inverse -/
 
+lemma mul_both_sides {n:ℕ} {A B : Matrix (Fin n) (Fin n) ℂ} {u v: Matrix (Fin n) (Fin 1) ℂ}
+ : A * u = v → B * A * u = B * v := by
+   intro h
+   rw[←h,Matrix.mul_assoc]
+
 theorem eigen_inv
-  {n:ℕ} {A:Matrix (Fin n) (Fin n) ℂ} [Invertible A] {s:ℂ}
+  {n:ℕ} {A:Matrix (Fin n) (Fin n) ℂ} [hia : Invertible A] {s:ℂ}
   : is_eigenvalue A s → is_eigenvalue A⁻¹ s⁻¹ := by
   intro ⟨ v, ⟨ vnz, hv ⟩ ⟩
-  have snz : s ≠ 0 := sorry
+  have snz : s ≠ 0 := by
+    intro h
+    rw[h,zero_smul] at hv
+    have h1 : A⁻¹ * A * v = A⁻¹ * (0: Matrix (Fin n) (Fin 1) ℂ) := by
+      apply mul_both_sides hv
+    have h2 : A⁻¹ * (0: Matrix (Fin n) (Fin 1) ℂ) = 0 := by exact Matrix.mul_zero A⁻¹
+    rw[h2] at h1
+    simp at h1
+    exact vnz h1
   use v
   constructor
   . exact vnz
-  . have : v = A⁻¹ * (s • v) := sorry
-    have : v = s • (A⁻¹ * v) := sorry
-    have : s⁻¹ • v = (A⁻¹ * v) := sorry
+  . have : A⁻¹ * A * v = A⁻¹ * (s • v) := by
+      apply mul_both_sides hv
+    have : v = s • (A⁻¹ * v) := by
+      simp at this
+      exact this
+    have : s⁻¹ • v = (A⁻¹ * v) := by exact (inv_smul_eq_iff₀ snz).mpr this
     exact id (Eq.symm this)
 
 /- # Exercise 2 : If the sum of each row is 1, then 1 is an eigenvalue -/
