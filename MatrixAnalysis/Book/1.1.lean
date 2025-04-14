@@ -287,7 +287,7 @@ theorem sum_rows_one {n:ℕ} {hnp : n>0} {A : Matrix (Fin n) (Fin n) ℂ}
 
 /- # Exercise 5 : Idempotent Matrices and their eigenvalues -/
 
-theorem smul_congr {n: ℕ} {a b : ℂ} {v : Matrix (Fin n) (Fin 1) ℂ} (hnz : v ≠ 0)
+lemma smul_congr {n: ℕ} {a b : ℂ} {v : Matrix (Fin n) (Fin 1) ℂ} (hnz : v ≠ 0)
   : a • v = b • v → a = b := by
   intro h
   rw[matrix_neq_exists] at hnz
@@ -303,7 +303,11 @@ theorem smul_congr {n: ℕ} {a b : ℂ} {v : Matrix (Fin n) (Fin 1) ℂ} (hnz : 
 
 theorem idempotent_zero_one {n:ℕ} {A : Matrix (Fin n) (Fin n) ℂ} (s : ℂ)
   : A*A = A → is_eigenvalue A s → (s = 0 ∨ s = 1) := by
+
   intro h ha
+  apply eq_zero_or_one_of_sq_eq_self
+  rw[pow_two]
+
   let p : Poly ℂ 3 := ![0,0,1]
   obtain ⟨ v, ⟨ hnzv, hv ⟩ ⟩ := ha
   have hep : is_eigen_pair A s v := And.intro hnzv hv
@@ -312,18 +316,53 @@ theorem idempotent_zero_one {n:ℕ} {A : Matrix (Fin n) (Fin n) ℂ} (s : ℂ)
   have h2 : p.apply s = s*s  := by small_poly p; exact pow_two s
   simp[h1,h2] at hep
   obtain ⟨ h3, h4 ⟩ := hep
-  rw[←h] at hv
-  simp[hv] at h4
-  refine eq_zero_or_one_of_sq_eq_self ?_
-  rw[pow_two]
+  simp[h,hv] at h4
+
   apply smul_congr hnzv at h4
   exact id (Eq.symm h4)
 
-
 /- # Exercise 6 : Nilpotent Matrices and their eigenvalues -/
 
+def monomial {R: Type*} [Ring R] (q:ℕ) : Poly R (q+1) :=
+  λ i => if i < q then 0 else 1
+
+lemma eigenval_of_power {n:ℕ} {A : Matrix (Fin n) (Fin n) ℂ} {s : ℂ} {v: Matrix (Fin n) (Fin 1) ℂ} (q:ℕ)
+  : is_eigen_pair A s v → is_eigen_pair (A^q) (s^q) v := by
+  intro h
+  constructor
+  . exact h.left
+  . let p : Poly ℂ (q+1) := monomial q
+
+    have h3 : p.apply A = A^q := by -- TODO: this have and the next
+      unfold p Poly.apply monomial  -- should be done via a lemma
+      simp[Fin.sum_univ_castSucc]
+      have : ∀ x : Fin q, x.castSucc < Fin.last q := by
+        exact fun x ↦ Fin.castSucc_lt_last x
+      simp[this]
+
+    have h4 : p.apply s = s^q := by
+      unfold p Poly.apply monomial
+      simp[Fin.sum_univ_castSucc]
+      have : ∀ x : Fin q, x.castSucc < Fin.last q := by
+        exact fun x ↦ Fin.castSucc_lt_last x
+      simp[this]
+
+    apply eigen_pair_of_poly p at h
+    simp[p,h3,h4] at h
+
+    exact h.right
+
 theorem nilpotent_zero_one {n:ℕ} {A : Matrix (Fin n) (Fin n) ℂ} (s : ℂ)
-  : ∃ q : ℕ , A^q = 0 → is_eigenvalue A s → s = 0 := sorry
+  : (∃ q : ℕ , A^q = 0) → is_eigenvalue A s → s = 0 := by
+    intro ⟨ q, hq ⟩ hs
+    obtain ⟨ v, ⟨ hnzv, hv ⟩ ⟩ := hs
+    have hep : is_eigen_pair A s v := And.intro hnzv hv
+    apply eigenval_of_power q at hep
+    obtain ⟨ h3, h4 ⟩ := hep
+    have : (0 : Matrix (Fin n) (Fin n) ℂ) * v = (0:ℂ) • v := by simp
+    rw[hq,this] at h4
+    apply smul_congr hnzv at h4
+    exact pow_eq_zero (id (Eq.symm h4))
 
 /- # Exercise 7 : Todo -/
 
