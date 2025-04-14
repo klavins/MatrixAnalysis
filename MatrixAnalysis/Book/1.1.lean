@@ -2,8 +2,9 @@ import Mathlib
 import MatrixAnalysis.Data.Polynomial.Basic
 import MatrixAnalysis.Data.Matrix.Basic
 import MatrixAnalysis.Data.Matrix.Eigenvalues
+import MatrixAnalysis.Data.Matrix.Determinant
 
-namespace MatrixAnalysis
+open MatrixAnalysis
 
 /- # 1.1 The eigenvalue-eigenvector equation
 
@@ -92,10 +93,10 @@ instance hmul_smul_inst {n m:ℕ} :
 
 Now we can state the theorem about eigenvalues of polynomials of matrices. Note that p.apply A would not typecheck without the above instance. -/
 
-theorem eigen_pair_of_poly {n m:ℕ} (A : Matrix (Fin n) (Fin n) ℂ)
+theorem eigen_pair_of_poly {n m:ℕ} {A : Matrix (Fin n) (Fin n) ℂ}
+                            {s : ℂ}
+                            {v :  Matrix (Fin n) (Fin 1) ℂ}
                             (p : Poly ℂ m)
-                            (s : ℂ)
-                            (v :  Matrix (Fin n) (Fin 1) ℂ)
   : is_eigen_pair A s v → is_eigen_pair (p.apply A) (p.apply s) v  := by
 
     intro h
@@ -133,7 +134,7 @@ theorem eigen_val_of_poly {n m:ℕ} {A : Matrix (Fin n) (Fin n) ℂ}
 
     intro ⟨ v, hv ⟩
     have hev : is_eigen_pair A s v := hv
-    apply eigen_pair_of_poly A p at hev
+    apply @eigen_pair_of_poly at hev
     exact eigen_value_from_pair (p.apply A) (p.apply s) v hev
 
 /- # Example (p36) : Example polynomial of a matrix
@@ -234,47 +235,26 @@ theorem eig_zero_to_non_sing
     . intro ⟨ v, ⟨ hz, hv ⟩ ⟩
       exact ⟨ v, ⟨ hz, by simp; exact hv ⟩  ⟩
 
-/- # Exercise 1 : Eigenvalues of the inverse
-
-This one requires a lot of information about inverses and determinants. We seem to need:
-
-  det A ≠ 0 ↔ nonsingular A
-  nonsingular A ↔ Invertible
-
--/
-
-theorem non_singular_det_nz
-  {n:ℕ} {A:Matrix (Fin n) (Fin n) ℂ} {s:ℂ}
-  : nonsingular A ↔ A.det ≠ 0 := by
-  constructor
-  . intro hs hd
-    unfold nonsingular at hs
-    sorry
-  . intro hd v hA
-    sorry
+/- # Exercise 1 : Eigenvalues of the inverse -/
 
 theorem eigen_inv
   {n:ℕ} {A:Matrix (Fin n) (Fin n) ℂ} [Invertible A] {s:ℂ}
   : is_eigenvalue A s → is_eigenvalue A⁻¹ s⁻¹ := by
-  intro ⟨ v, ⟨ hz, hs ⟩ ⟩
+  intro ⟨ v, ⟨ vnz, hv ⟩ ⟩
+  have snz : s ≠ 0 := sorry
   use v
-  have : s⁻¹*s = 1 := by
-    refine (IsUnit.inv_mul_eq_iff_eq_mul ?_).mpr ?_
-    apply?
   constructor
-  . exact hz
-
-  . calc A⁻¹ * v
-    _  = 1 • A⁻¹ * v := by aesop
-    _  = (s⁻¹*s) • A⁻¹ * v := by aesop
-    _  = _ := sorry
+  . exact vnz
+  . have : v = A⁻¹ * (s • v) := sorry
+    have : v = s • (A⁻¹ * v) := sorry
+    have : s⁻¹ • v = (A⁻¹ * v) := sorry
+    exact id (Eq.symm this)
 
 /- # Exercise 2 : If the sum of each row is 1, then 1 is an eigenvalue -/
 
 theorem sum_rows_one {n:ℕ} {hnp : n>0} {A : Matrix (Fin n) (Fin n) ℂ}
   : (∀ i : Fin n, ∑ j : Fin n, A i j = 1) → is_eigenvalue A 1 := by
     intro hi
-    unfold is_eigenvalue
     use Matrix.of (λ _ _ => 1)
     constructor
     . intro h
@@ -291,8 +271,38 @@ theorem sum_rows_one {n:ℕ} {hnp : n>0} {A : Matrix (Fin n) (Fin n) ℂ}
 
 /- # Exercise 5 : Idempotent Matrices and their eigenvalues -/
 
+theorem smul_congr {n: ℕ} {a b : ℂ} {v : Matrix (Fin n) (Fin 1) ℂ} (hnz : v ≠ 0)
+  : a • v = b • v → a = b := by
+  intro h
+  rw[matrix_neq_exists] at hnz
+  have ⟨i, ⟨ j, hij ⟩ ⟩ := hnz
+  have : j = 0 := by exact Fin.fin_one_eq_zero j
+  rw[this] at hij
+  have h_eq : (a • v) i 0 = (b • v) i 0 := by rw [h]
+  simp [Matrix.smul_apply, hij] at h_eq
+  apply Or.elim h_eq
+  . exact id
+  . intro hv
+    simp_all
+
 theorem idempotent_zero_one {n:ℕ} {A : Matrix (Fin n) (Fin n) ℂ} (s : ℂ)
-  : A*A = A → is_eigenvalue A s → (s = 0 ∨ s = 1) := sorry
+  : A*A = A → is_eigenvalue A s → (s = 0 ∨ s = 1) := by
+  intro h ha
+  let p : Poly ℂ 3 := ![0,0,1]
+  obtain ⟨ v, ⟨ hnzv, hv ⟩ ⟩ := ha
+  have hep : is_eigen_pair A s v := And.intro hnzv hv
+  apply eigen_pair_of_poly p at hep
+  have h1 : p.apply A = A*A  := by small_poly p; exact pow_two A
+  have h2 : p.apply s = s*s  := by small_poly p; exact pow_two s
+  simp[h1,h2] at hep
+  obtain ⟨ h3, h4 ⟩ := hep
+  rw[←h] at hv
+  simp[hv] at h4
+  refine eq_zero_or_one_of_sq_eq_self ?_
+  rw[pow_two]
+  apply smul_congr hnzv at h4
+  exact id (Eq.symm h4)
+
 
 /- # Exercise 6 : Nilpotent Matrices and their eigenvalues -/
 
@@ -305,5 +315,3 @@ theorem nilpotent_zero_one {n:ℕ} {A : Matrix (Fin n) (Fin n) ℂ} (s : ℂ)
 -- Maybe this one is out of scope for this project?
 
 /- # Exercise 9 :Todo -/
-
-end MatrixAnalysis
