@@ -6,23 +6,6 @@ namespace MatrixAnalysis
 
 /- Note: In Mathlib the characteristic polynomial is Matrix.charpoly. We should probably use that here. -/
 
-namespace Temp
-
-open Polynomial
-
-noncomputable
-def pre_cp {n:ℕ} (A : Matrix (Fin n) (Fin n) ℂ) :=
-  (X * (C (1:Matrix (Fin n) (Fin n) ℂ)) - C A)
-
-def M : Matrix (Fin 2) (Fin 2) ℂ := Matrix.of !![1,2;0,4]
-variable (t:ℂ)
-#check pre_cp M t -- It's a polynomial over matrices. But it's also a matrix,
-                  -- so who do we take its determinant?
-
-end Temp
-
--/
-
 variable {n:ℕ} {A : Matrix (Fin n) (Fin n) ℂ}
 
 /- The characteristic polynomial of a matrix A is |sI-A|. -/
